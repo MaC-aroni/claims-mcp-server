@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.1
+      - name: Terraform fmt and validate
+        run: |
+          for dir in terraform/*/; do
+            echo "== $dir"
+            terraform -chdir="$dir" fmt -check -diff || exit 1
+            terraform -chdir="$dir" init -backend=false -input=false -no-color || exit 1
+            terraform -chdir="$dir" validate -no-color || exit 1
+          done
